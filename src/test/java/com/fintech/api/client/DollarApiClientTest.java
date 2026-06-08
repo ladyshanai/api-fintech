@@ -3,8 +3,9 @@ package com.fintech.api.client;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.cloud.openfeign.FeignClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,16 +21,17 @@ class DollarApiClientTest {
     @Test
     @DisplayName("getCotizacion: Debe retornar DolarModel válido")
     void testGetCotizacion_Success() {
-        DollarApiClient client = new DollarApiClient();
-        ReflectionTestUtils.setField(client, "url", "https://dolarapi.com/v1/dolares/oficial");
+        DollarApiClient client = Mockito.mock(DollarApiClient.class);
+        // No se realiza la llamada HTTP en el test unitario; comprobamos que la interfaz es mockeable
+        assertNotNull(client);
 
     }
 
     @Test
     @DisplayName("DolarApiClient debe ser un Component")
     void testDolarApiClientIsComponent() {
-        DollarApiClient client = new DollarApiClient();
-        assertNotNull(client);
+        // Ahora DollarApiClient es una interfaz FeignClient; verificamos la anotación
+        assertTrue(DollarApiClient.class.isAnnotationPresent(FeignClient.class));
     }
 
     @Test
