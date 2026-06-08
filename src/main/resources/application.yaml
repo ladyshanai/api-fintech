@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: api-fintech
+  datasource:
+    url: jdbc:mysql://localhost:3306/api_fintech?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: api_user
+    password: api_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        use_sql_comments: true
+    show-sql: false
+
+
+dolar-api-client:
+  api-dolar-url: https://dolarapi.com/v1/dolares/oficial
