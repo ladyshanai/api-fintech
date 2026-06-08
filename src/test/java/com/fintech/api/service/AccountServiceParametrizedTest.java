@@ -1,7 +1,7 @@
 package com.fintech.api.service;
 
-import com.fintech.api.client.DolarApiClient;
-import com.fintech.api.client.DolarModel;
+import com.fintech.api.client.DollarApiClient;
+import com.fintech.api.client.DollarModel;
 import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.AccountEntity;
@@ -40,7 +40,7 @@ class AccountServiceParametrizedTest {
     private ClientRepository clientRepository;
 
     @Mock
-    private DolarApiClient dolarApiClient;
+    private DollarApiClient dollarApiClient;
 
     @InjectMocks
     private AccountService accountService;
@@ -111,7 +111,7 @@ class AccountServiceParametrizedTest {
     void testGetAccountByIdUSDMultipleBalances(Long accountId, Double balance, String currency, String cotiza) {
         // Given
         AccountEntity account = createMockAccountWithBalance(accountId, new BigDecimal(balance.toString()), Currency.USD);
-        DolarModel dolarModel = new DolarModel(
+        DollarModel dollarModel = new DollarModel(
                 "Oficial",
                 "ABC",
                 "Dólar",
@@ -121,7 +121,7 @@ class AccountServiceParametrizedTest {
         );
 
         when(accountRepository.findById(accountId)).thenReturn(Optional.of(account));
-        when(dolarApiClient.getCotizacion()).thenReturn(dolarModel);
+        when(dollarApiClient.getCotizacion()).thenReturn(dollarModel);
 
         // When
         AccountResponse response = accountService.getAccountById(accountId);

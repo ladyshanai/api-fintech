@@ -1,7 +1,7 @@
 package com.fintech.api.service;
 
-import com.fintech.api.client.DolarApiClient;
-import com.fintech.api.client.DolarModel;
+import com.fintech.api.client.DollarApiClient;
+import com.fintech.api.client.DollarModel;
 import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.AccountEntity;
@@ -18,12 +18,12 @@ import java.util.List;
 public class AccountService {
     private final AccountRepository accountRepository;
     private final ClientRepository clientRepository;
-    private final DolarApiClient dolarApiClient;
+    private final DollarApiClient dollarApiClient;
 
-    public AccountService(AccountRepository accountRepository, ClientRepository clientRepository, DolarApiClient dolarApiClient) {
+    public AccountService(AccountRepository accountRepository, ClientRepository clientRepository, DollarApiClient dollarApiClient) {
         this.accountRepository = accountRepository;
         this.clientRepository = clientRepository;
-        this.dolarApiClient = dolarApiClient;
+        this.dollarApiClient = dollarApiClient;
     }
 
 
@@ -32,8 +32,8 @@ public class AccountService {
                 .orElseThrow(() -> new RuntimeException("Account not found" + id));
         var balance = BigDecimal.ZERO;
         if (accountEntity.getCurrency().equals(Currency.USD)) {
-            DolarModel dolarModel = dolarApiClient.getCotizacion();
-            balance = accountEntity.getBalance().multiply(dolarModel.compra());
+            DollarModel dollarModel = dollarApiClient.getCotizacion();
+            balance = accountEntity.getBalance().multiply(dollarModel.compra());
         }
 
         return (new AccountResponse(accountEntity.getAccountId(),
@@ -54,8 +54,8 @@ public class AccountService {
                .stream().map(accountEntity -> {
                    var balance = BigDecimal.ZERO;
                    if (accountEntity.getCurrency().equals(Currency.USD)) {
-                       DolarModel dolarModel = dolarApiClient.getCotizacion();
-                       balance = accountEntity.getBalance().multiply(dolarModel.compra());
+                       DollarModel dollarModel = dollarApiClient.getCotizacion();
+                       balance = accountEntity.getBalance().multiply(dollarModel.compra());
                    }
                    return new AccountResponse(accountEntity.getAccountId(),
                            accountEntity.getClient().getId(),

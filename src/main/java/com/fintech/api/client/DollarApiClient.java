@@ -8,16 +8,16 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 
 @Component
-public class DolarApiClient {
+public class DollarApiClient {
     private final RestClient dolarclient = RestClient.create();
     @Value("${dolar-api-client.api-dolar-url}")
     private String url;
-    public DolarModel getCotizacion(){
+    public DollarModel getCotizacion(){
 
         return dolarclient.get()
                 .uri(url)
                 .accept(APPLICATION_JSON)
                 .retrieve()
-                .body(DolarModel.class);
+                .body(DollarModel.class);
     }
 }

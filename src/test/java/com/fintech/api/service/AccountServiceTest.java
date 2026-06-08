@@ -1,7 +1,7 @@
 package com.fintech.api.service;
 
-import com.fintech.api.client.DolarApiClient;
-import com.fintech.api.client.DolarModel;
+import com.fintech.api.client.DollarApiClient;
+import com.fintech.api.client.DollarModel;
 import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.AccountEntity;
@@ -42,7 +42,7 @@ class AccountServiceTest {
     private ClientRepository clientRepository;
 
     @Mock
-    private DolarApiClient dolarApiClient;
+    private DollarApiClient dollarApiClient;
 
     @InjectMocks
     private AccountService accountService;
@@ -50,7 +50,7 @@ class AccountServiceTest {
     private ClientEntity mockClient;
     private AccountEntity mockAccountARS;
     private AccountEntity mockAccountUSD;
-    private DolarModel mockDolarModel;
+    private DollarModel mockDollarModel;
 
     @BeforeEach
     void setUp() {
@@ -86,7 +86,7 @@ class AccountServiceTest {
         mockAccountUSD.setUpdatedAt(LocalDateTime.now());
 
         // Preparar modelo del dólar
-        mockDolarModel = new DolarModel(
+        mockDollarModel = new DollarModel(
                 "Oficial",
                 "ABC",
                 "Dólar",
@@ -119,7 +119,7 @@ class AccountServiceTest {
         assertTrue(response.active());
 
         verify(accountRepository, times(1)).findById(1L);
-        verify(dolarApiClient, never()).getCotizacion();
+        verify(dollarApiClient, never()).getCotizacion();
     }
 
     @Test
@@ -127,7 +127,7 @@ class AccountServiceTest {
     void testGetAccountByIdUSD() {
         // Given
         when(accountRepository.findById(2L)).thenReturn(Optional.of(mockAccountUSD));
-        when(dolarApiClient.getCotizacion()).thenReturn(mockDolarModel);
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
 
         // When
         AccountResponse response = accountService.getAccountById(2L);
@@ -144,7 +144,7 @@ class AccountServiceTest {
         assertTrue(response.active());
 
         verify(accountRepository, times(1)).findById(2L);
-        verify(dolarApiClient, times(1)).getCotizacion();
+        verify(dollarApiClient, times(1)).getCotizacion();
     }
 
     @Test
@@ -187,7 +187,7 @@ class AccountServiceTest {
         // Given
         List<AccountEntity> accounts = Arrays.asList(mockAccountARS, mockAccountUSD);
         when(accountRepository.findAll()).thenReturn(accounts);
-        when(dolarApiClient.getCotizacion()).thenReturn(mockDolarModel);
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
 
         // When
         List<AccountResponse> responses = accountService.getAllAccounts();
@@ -198,7 +198,7 @@ class AccountServiceTest {
         assertEquals("001-ARS", responses.get(0).accountNumber());
         assertEquals("002-USD", responses.get(1).accountNumber());
         verify(accountRepository, times(1)).findAll();
-        verify(dolarApiClient, times(1)).getCotizacion(); // Una vez para la cuenta USD
+        verify(dollarApiClient, times(1)).getCotizacion(); // Una vez para la cuenta USD
     }
 
     @Test
@@ -222,7 +222,7 @@ class AccountServiceTest {
         // Given
         List<AccountEntity> accounts = Arrays.asList(mockAccountARS, mockAccountUSD, mockAccountUSD);
         when(accountRepository.findAll()).thenReturn(accounts);
-        when(dolarApiClient.getCotizacion()).thenReturn(mockDolarModel);
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
 
         // When
         List<AccountResponse> responses = accountService.getAllAccounts();
@@ -436,7 +436,7 @@ class AccountServiceTest {
         account.setClient(mockClient);
 
         when(accountRepository.findById(1L)).thenReturn(Optional.of(account));
-        when(dolarApiClient.getCotizacion()).thenReturn(mockDolarModel);
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
 
         // When
         AccountResponse response = accountService.getAccountById(1L);
