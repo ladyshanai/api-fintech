@@ -54,7 +54,6 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Preparar cliente mock
         mockClient = new ClientEntity();
         mockClient.setId(1L);
         mockClient.setFirstName("Juan");
@@ -63,7 +62,6 @@ class AccountServiceTest {
         mockClient.setEmail("juan@test.com");
         mockClient.setActive(true);
 
-        // Preparar cuenta en ARS
         mockAccountARS = new AccountEntity();
         mockAccountARS.setAccountId(1L);
         mockAccountARS.setAccountNumber("001-ARS");
@@ -74,7 +72,6 @@ class AccountServiceTest {
         mockAccountARS.setCreatedAt(LocalDateTime.now());
         mockAccountARS.setUpdatedAt(LocalDateTime.now());
 
-        // Preparar cuenta en USD
         mockAccountUSD = new AccountEntity();
         mockAccountUSD.setAccountId(2L);
         mockAccountUSD.setAccountNumber("002-USD");
@@ -85,7 +82,6 @@ class AccountServiceTest {
         mockAccountUSD.setCreatedAt(LocalDateTime.now());
         mockAccountUSD.setUpdatedAt(LocalDateTime.now());
 
-        // Preparar modelo del dólar
         mockDollarModel = new DollarModel(
                 "Oficial",
                 "ABC",

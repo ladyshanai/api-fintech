@@ -13,6 +13,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
@@ -43,11 +45,9 @@ class AccountE2ETest {
 
     @BeforeEach
     void setUp() {
-        // Limpiar datos de pruebas anteriores en orden correcto (cuentas primero para evitar FK)
         accountRepository.deleteAll();
         clientRepository.deleteAll();
 
-        // Crear un cliente de prueba
         clientEntity = new ClientEntity();
         clientEntity.setFirstName("Juan");
         clientEntity.setLastNameOrCompanyName("Pérez");
@@ -67,7 +67,6 @@ class AccountE2ETest {
     @Test
     @DisplayName("Flujo E2E: Crear cuenta ARS, obtener, listar y eliminar")
     void testCompleteAccountLifecycleARS() {
-        // 1. CREAR CUENTA ARS
         AccountRequest createRequest = new AccountRequest(
                 clientEntity.getId(),
                 "1234567890-ARS",
@@ -92,7 +91,6 @@ class AccountE2ETest {
         assertEquals("Juan", createdAccount.clientName());
         assertTrue(createdAccount.active());
 
-        // 2. OBTENER CUENTA POR ID
         ResponseEntity<AccountResponse> getResponse = restTemplate.getForEntity(
                 "/api/v1/accounts/" + createdAccountId,
                 AccountResponse.class
@@ -103,7 +101,6 @@ class AccountE2ETest {
         assertEquals(createdAccountId, getResponse.getBody().accountId());
         assertEquals("1234567890-ARS", getResponse.getBody().accountNumber());
 
-        // 3. LISTAR TODAS LAS CUENTAS
         ResponseEntity<AccountResponse[]> listResponse = restTemplate.getForEntity(
                 "/api/v1/accounts",
                 AccountResponse[].class
@@ -123,22 +120,19 @@ class AccountE2ETest {
         }
         assertTrue(foundAccount, "Cuenta creada no encontrada en la lista");
 
-        // 4. ELIMINAR CUENTA
         restTemplate.delete("/api/v1/accounts/" + createdAccountId);
 
-        // 5. VERIFICAR QUE LA CUENTA FUE ELIMINADA
         ResponseEntity<AccountResponse> deleteVerification = restTemplate.getForEntity(
                 "/api/v1/accounts/" + createdAccountId,
                 AccountResponse.class
         );
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, deleteVerification.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, deleteVerification.getStatusCode());
     }
 
     @Test
     @DisplayName("Flujo E2E: Crear cuenta USD y validar conversión a pesos")
     void testCreateUSDAccountWithConversion() {
-        // CREAR CUENTA USD
         AccountRequest createRequest = new AccountRequest(
                 clientEntity.getId(),
                 "9876543210-USD",
@@ -161,7 +155,6 @@ class AccountE2ETest {
         assertEquals("USD", createdAccount.currency().toString());
         assertEquals(new BigDecimal("1000.00"), createdAccount.balance());
 
-        // OBTENER LA CUENTA Y VERIFICAR CONVERSIÓN
         ResponseEntity<AccountResponse> getResponse = restTemplate.getForEntity(
                 "/api/v1/accounts/" + createdAccountId,
                 AccountResponse.class
@@ -171,15 +164,61 @@ class AccountE2ETest {
         AccountResponse retrievedAccount = getResponse.getBody();
 
         assertNotNull(retrievedAccount);
-        // La conversión a pesos debe ser mayor que 0 para USD
         assertTrue(retrievedAccount.balanceInPesos().compareTo(BigDecimal.ZERO) > 0);
         assertEquals(new BigDecimal("1000.00"), retrievedAccount.balance());
     }
 
     @Test
+    @DisplayName("E2E: Actualizar cuenta existente (PUT)")
+    void testUpdateAccount() {
+        AccountRequest createRequest = new AccountRequest(
+                clientEntity.getId(),
+                "TO-UPDATE-ACC",
+                "ARS",
+                new BigDecimal("2000.00")
+        );
+
+        ResponseEntity<AccountResponse> createResponse = restTemplate.postForEntity(
+                "/api/v1/accounts",
+                createRequest,
+                AccountResponse.class
+        );
+
+        assertEquals(HttpStatus.OK, createResponse.getStatusCode());
+        AccountResponse created = createResponse.getBody();
+        assertNotNull(created);
+        Long id = created.accountId();
+
+        AccountRequest updateRequest = new AccountRequest(
+                clientEntity.getId(),
+                "UPDATED-ACC-USD",
+                "USD",
+                new BigDecimal("50.00")
+        );
+
+        HttpEntity<AccountRequest> entity = new HttpEntity<>(updateRequest);
+        ResponseEntity<AccountResponse> updateResponse = restTemplate.exchange(
+                "/api/v1/accounts/{id}",
+                HttpMethod.PUT,
+                entity,
+                AccountResponse.class,
+                id
+        );
+
+        assertEquals(HttpStatus.OK, updateResponse.getStatusCode());
+        AccountResponse updated = updateResponse.getBody();
+        assertNotNull(updated);
+        assertEquals(id, updated.accountId());
+        assertEquals("UPDATED-ACC-USD", updated.accountNumber());
+        assertEquals("USD", updated.currency().toString());
+        assertEquals(new BigDecimal("50.00"), updated.balance());
+        // Para USD, balanceInPesos debe ser mayor a 0
+        assertTrue(updated.balanceInPesos().compareTo(BigDecimal.ZERO) > 0);
+    }
+
+    @Test
     @DisplayName("E2E: Crear múltiples cuentas para un cliente")
     void testCreateMultipleAccountsForSingleClient() {
-        // CREAR PRIMERA CUENTA
         AccountRequest request1 = new AccountRequest(
                 clientEntity.getId(),
                 "ACC-001-ARS",
@@ -197,7 +236,6 @@ class AccountE2ETest {
         assertNotNull(response1.getBody());
         Long accountId1 = response1.getBody().accountId();
 
-        // CREAR SEGUNDA CUENTA
         AccountRequest request2 = new AccountRequest(
                 clientEntity.getId(),
                 "ACC-002-USD",
@@ -215,7 +253,6 @@ class AccountE2ETest {
         assertNotNull(response2.getBody());
         Long accountId2 = response2.getBody().accountId();
 
-        // LISTAR TODAS LAS CUENTAS
         ResponseEntity<AccountResponse[]> listResponse = restTemplate.getForEntity(
                 "/api/v1/accounts",
                 AccountResponse[].class
@@ -226,7 +263,6 @@ class AccountE2ETest {
         assertNotNull(accounts);
         assertTrue(accounts.length >= 2);
 
-        // VERIFICAR QUE AMBAS CUENTAS ESTÁN EN LA LISTA
         int accountCount = 0;
         for (AccountResponse account : accounts) {
             if (account.accountId().equals(accountId1) || account.accountId().equals(accountId2)) {
@@ -254,7 +290,7 @@ class AccountE2ETest {
                 AccountResponse.class
         );
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     @Test
@@ -267,13 +303,12 @@ class AccountE2ETest {
                 AccountResponse.class
         );
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     @Test
     @DisplayName("E2E: Validar estructura de respuesta de cuentas")
     void testAccountResponseStructure() {
-        // CREAR UNA CUENTA
         AccountRequest createRequest = new AccountRequest(
                 clientEntity.getId(),
                 "STRUCT-TEST",
@@ -291,7 +326,6 @@ class AccountE2ETest {
         AccountResponse account = createResponse.getBody();
         assertNotNull(account);
 
-        // VALIDAR QUE TODOS LOS CAMPOS ESTÁN PRESENTES
         assertNotNull(account.accountId());
         assertNotNull(account.clientId());
         assertNotNull(account.clientName());
@@ -303,7 +337,6 @@ class AccountE2ETest {
         assertNotNull(account.createdAt());
         assertNotNull(account.updatedAt());
 
-        // VALIDAR TIPOS Y VALORES
         assertTrue(account.accountId() > 0);
         assertEquals(clientEntity.getId(), account.clientId());
         assertEquals("Juan", account.clientName());
@@ -314,7 +347,6 @@ class AccountE2ETest {
     @Test
     @DisplayName("E2E: Verificar que listar cuentas retorna lista vacía cuando no hay cuentas")
     void testListAccountsEmptyList() {
-        // Si la base de datos está vacía, debe retornar lista vacía
         ResponseEntity<AccountResponse[]> response = restTemplate.getForEntity(
                 "/api/v1/accounts",
                 AccountResponse[].class
@@ -322,7 +354,6 @@ class AccountE2ETest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        // Al menos debería retornar un array (aunque esté vacío)
         assertNotNull(response.getBody());
     }
 }

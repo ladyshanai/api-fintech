@@ -8,6 +8,7 @@ import com.fintech.api.entity.AccountEntity;
 import com.fintech.api.enums.Currency;
 import com.fintech.api.repository.AccountRepository;
 import com.fintech.api.repository.ClientRepository;
+import com.fintech.api.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,7 +30,7 @@ public class AccountService {
 
     public AccountResponse getAccountById(Long id) {
         var accountEntity = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found" + id));
         var balance = BigDecimal.ZERO;
         if (accountEntity.getCurrency().equals(Currency.USD)) {
             DollarModel dollarModel = dollarApiClient.getCotizacion();
@@ -73,7 +74,7 @@ public class AccountService {
 
     public AccountResponse addAccount(AccountRequest accountRequest) {
         var clientEntity = clientRepository.findById(accountRequest.clientId())
-                .orElseThrow(() -> new RuntimeException("Client not found with id: " + accountRequest.clientId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + accountRequest.clientId()));
 
         var accountEntity = new AccountEntity();
         accountEntity.setAccountNumber(accountRequest.accountNumber());
@@ -99,4 +100,36 @@ public class AccountService {
         accountRepository.deleteById(id);
     }
 
+    public AccountResponse updateAccount(Long id, AccountRequest accountRequest) {
+        var clientEntity = clientRepository.findById(accountRequest.clientId())
+                .orElseThrow(() -> new RuntimeException("Client not found with id: " + accountRequest.clientId()));
+
+        var accountEntity = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        accountEntity.setAccountNumber(accountRequest.accountNumber());
+        accountEntity.setCurrency(accountRequest.currency().equals("USD") ? Currency.USD : Currency.ARS);
+        accountEntity.setBalance(accountRequest.balance());
+        accountEntity.setClient(clientEntity);
+        accountEntity.setUpdatedAt(LocalDateTime.now());
+
+        var updatedAccount = accountRepository.save(accountEntity);
+
+        var balanceInPesos = BigDecimal.ZERO;
+        if (updatedAccount.getCurrency().equals(Currency.USD)) {
+            var dollarModel = dollarApiClient.getCotizacion();
+            balanceInPesos = updatedAccount.getBalance().multiply(dollarModel.compra());
+        }
+
+        return new AccountResponse(updatedAccount.getAccountId(),
+                updatedAccount.getClient().getId(),
+                updatedAccount.getClient().getFirstName(),
+                updatedAccount.getAccountNumber(),
+                updatedAccount.getCurrency(),
+                updatedAccount.getBalance(),
+                balanceInPesos,
+                updatedAccount.getActive(),
+                updatedAccount.getCreatedAt(),
+                updatedAccount.getUpdatedAt());
+    }
 }

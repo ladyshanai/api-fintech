@@ -46,7 +46,6 @@ class AccountE2EValidationTest {
         accountRepository.deleteAll();
         clientRepository.deleteAll();
 
-        // Crear dos clientes de prueba
         client1 = new ClientEntity();
         client1.setFirstName("Carlos");
         client1.setLastNameOrCompanyName("López");
@@ -71,7 +70,6 @@ class AccountE2EValidationTest {
     @Test
     @DisplayName("E2E: Validar saldos en diferentes monedas")
     void testAccountBalanceInDifferentCurrencies() {
-        // Crear cuenta con 5000 ARS
         AccountRequest arsRequest = new AccountRequest(
                 client1.getId(),
                 "ACC-BALANCE-ARS",
@@ -90,7 +88,6 @@ class AccountE2EValidationTest {
         assertNotNull(arsAccount);
         assertEquals(new BigDecimal("5000.00"), arsAccount.balance());
 
-        // Crear cuenta con 500 USD
         AccountRequest usdRequest = new AccountRequest(
                 client1.getId(),
                 "ACC-BALANCE-USD",
@@ -109,7 +106,6 @@ class AccountE2EValidationTest {
         assertNotNull(usdAccount);
         assertEquals(new BigDecimal("500.00"), usdAccount.balance());
 
-        // Obtener cuenta USD y validar conversión
         ResponseEntity<AccountResponse> getUsdResponse = restTemplate.getForEntity(
                 "/api/v1/accounts/" + usdAccount.accountId(),
                 AccountResponse.class
@@ -118,14 +114,12 @@ class AccountE2EValidationTest {
         assertEquals(HttpStatus.OK, getUsdResponse.getStatusCode());
         AccountResponse retrievedUsdAccount = getUsdResponse.getBody();
         assertNotNull(retrievedUsdAccount);
-        // USD debe tener saldo en pesos convertido
         assertTrue(retrievedUsdAccount.balanceInPesos().compareTo(BigDecimal.ZERO) > 0);
     }
 
     @Test
     @DisplayName("E2E: Verificar que cada cuenta está asociada al cliente correcto")
     void testAccountBelongsToCorrectClient() {
-        // Cliente 1 crea una cuenta
         AccountRequest client1Request = new AccountRequest(
                 client1.getId(),
                 "CLIENT1-ACC",
@@ -143,7 +137,6 @@ class AccountE2EValidationTest {
         assertNotNull(client1Response.getBody());
         Long account1Id = client1Response.getBody().accountId();
 
-        // Cliente 2 crea una cuenta
         AccountRequest client2Request = new AccountRequest(
                 client2.getId(),
                 "CLIENT2-ACC",
@@ -161,7 +154,6 @@ class AccountE2EValidationTest {
         assertNotNull(client2Response.getBody());
         Long account2Id = client2Response.getBody().accountId();
 
-        // Obtener cuentas y verificar que pertenecen a los clientes correctos
         ResponseEntity<AccountResponse> getAccount1 = restTemplate.getForEntity(
                 "/api/v1/accounts/" + account1Id,
                 AccountResponse.class
@@ -186,7 +178,6 @@ class AccountE2EValidationTest {
     void testAccountNumberUniqueness() {
         String accountNumber = "UNIQUE-ACC-123";
 
-        // Crear primera cuenta
         AccountRequest request1 = new AccountRequest(
                 client1.getId(),
                 accountNumber,
@@ -202,7 +193,6 @@ class AccountE2EValidationTest {
 
         assertEquals(HttpStatus.OK, response1.getStatusCode());
 
-        // Intentar crear segunda cuenta con el mismo número
         AccountRequest request2 = new AccountRequest(
                 client2.getId(),
                 accountNumber,
@@ -216,14 +206,12 @@ class AccountE2EValidationTest {
                 AccountResponse.class
         );
 
-        // Debe fallar por violar la restricción unique
         assertNotEquals(HttpStatus.OK, response2.getStatusCode());
     }
 
     @Test
     @DisplayName("E2E: Crear y listar múltiples cuentas para múltiples clientes")
     void testMultipleAccountsMultipleClients() {
-        // Cliente 1 crea 2 cuentas
         AccountRequest c1Acc1 = new AccountRequest(client1.getId(), "C1-ACC1", "ARS", new BigDecimal("1000.00"));
         AccountRequest c1Acc2 = new AccountRequest(client1.getId(), "C1-ACC2", "USD", new BigDecimal("100.00"));
 
@@ -232,7 +220,6 @@ class AccountE2EValidationTest {
         Long c1a2Id = restTemplate.postForEntity("/api/v1/accounts", c1Acc2, AccountResponse.class)
                 .getBody().accountId();
 
-        // Cliente 2 crea 2 cuentas
         AccountRequest c2Acc1 = new AccountRequest(client2.getId(), "C2-ACC1", "ARS", new BigDecimal("5000.00"));
         AccountRequest c2Acc2 = new AccountRequest(client2.getId(), "C2-ACC2", "USD", new BigDecimal("500.00"));
 
@@ -241,7 +228,6 @@ class AccountE2EValidationTest {
         Long c2a2Id = Objects.requireNonNull(restTemplate.postForEntity("/api/v1/accounts", c2Acc2, AccountResponse.class)
                 .getBody()).accountId();
 
-        // Listar todas las cuentas
         ResponseEntity<AccountResponse[]> allAccounts = restTemplate.getForEntity(
                 "/api/v1/accounts",
                 AccountResponse[].class
@@ -252,7 +238,6 @@ class AccountE2EValidationTest {
         assertNotNull(accounts);
         assertEquals(4, accounts.length);
 
-        // Verificar que todas las cuentas están presentes
         boolean[] found = new boolean[4];
         for (AccountResponse account : accounts) {
             if (account.accountId().equals(c1a1Id)) found[0] = true;
@@ -269,7 +254,6 @@ class AccountE2EValidationTest {
     @Test
     @DisplayName("E2E: Eliminar cuenta y verificar que no existe más")
     void testDeleteAccountAndVerifyDeletion() {
-        // Crear una cuenta
         AccountRequest request = new AccountRequest(
                 client1.getId(),
                 "TO-DELETE",
@@ -286,22 +270,19 @@ class AccountE2EValidationTest {
         assertNotNull(createResponse.getBody());
         Long accountId = createResponse.getBody().accountId();
 
-        // Verificar que existe
         ResponseEntity<AccountResponse> existsResponse = restTemplate.getForEntity(
                 "/api/v1/accounts/" + accountId,
                 AccountResponse.class
         );
         assertEquals(HttpStatus.OK, existsResponse.getStatusCode());
 
-        // Eliminar
         restTemplate.delete("/api/v1/accounts/" + accountId);
 
-        // Verificar que no existe más
         ResponseEntity<AccountResponse> deletedResponse = restTemplate.getForEntity(
                 "/api/v1/accounts/" + accountId,
                 AccountResponse.class
         );
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, deletedResponse.getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, deletedResponse.getStatusCode());
     }
 
     @Test

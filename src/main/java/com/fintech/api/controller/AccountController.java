@@ -5,8 +5,6 @@ import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,6 +51,19 @@ public class AccountController {
     })
     public ResponseEntity<AccountResponse> createAccount(@RequestBody AccountRequest accountRequest) {
         var response = accountService.addAccount(accountRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Editar cuenta", description = "Edita una cuenta existente con los datos proporcionados")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cuenta editada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+            @ApiResponse(responseCode = "404", description = "Cuenta no encontrada")
+    })
+    public ResponseEntity<AccountResponse> updateAccount(@Parameter(description = "ID de la cuenta a editar") @PathVariable Long id,
+                                                         @RequestBody AccountRequest accountRequest) {
+        var response = accountService.updateAccount(id, accountRequest);
         return ResponseEntity.ok(response);
     }
 
