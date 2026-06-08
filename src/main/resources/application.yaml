@@ -16,6 +16,14 @@ spring:
         use_sql_comments: true
     show-sql: false
 
-
 dolar-api-client:
   api-dolar-url: https://dolarapi.com/v1/dolares/oficial
+
+# Configuración de Swagger/OpenAPI
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+
