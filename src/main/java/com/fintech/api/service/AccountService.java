@@ -9,6 +9,7 @@ import com.fintech.api.enums.Currency;
 import com.fintech.api.repository.AccountRepository;
 import com.fintech.api.repository.ClientRepository;
 import com.fintech.api.exception.ResourceNotFoundException;
+import com.fintech.api.exception.ExternalServiceException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,15 +28,23 @@ public class AccountService {
         this.dollarApiClient = dollarApiClient;
     }
 
+    private BigDecimal getBalanceInPesos(Currency currency, BigDecimal balance) {
+        if (!currency.equals(Currency.USD)) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            DollarModel dollarModel = dollarApiClient.getCotizacion();
+            return balance.multiply(dollarModel.compra());
+        } catch (Exception ex) {
+            throw new ExternalServiceException("No se pudo obtener cotización de dólares. Servicio temporal no disponible: " + ex.getMessage(), ex);
+        }
+    }
+
 
     public AccountResponse getAccountById(Long id) {
         var accountEntity = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found" + id));
-        var balance = BigDecimal.ZERO;
-        if (accountEntity.getCurrency().equals(Currency.USD)) {
-            DollarModel dollarModel = dollarApiClient.getCotizacion();
-            balance = accountEntity.getBalance().multiply(dollarModel.compra());
-        }
+        var balance = getBalanceInPesos(accountEntity.getCurrency(), accountEntity.getBalance());
 
         return (new AccountResponse(accountEntity.getAccountId(),
                 accountEntity.getClient().getId(),
@@ -52,25 +61,21 @@ public class AccountService {
 
     public List<AccountResponse> getAllAccounts() {
        return accountRepository.findAll()
-               .stream().map(accountEntity -> {
-                   var balance = BigDecimal.ZERO;
-                   if (accountEntity.getCurrency().equals(Currency.USD)) {
-                       DollarModel dollarModel = dollarApiClient.getCotizacion();
-                       balance = accountEntity.getBalance().multiply(dollarModel.compra());
-                   }
-                   return new AccountResponse(accountEntity.getAccountId(),
-                           accountEntity.getClient().getId(),
-                           accountEntity.getClient().getFirstName(),
-                           accountEntity.getAccountNumber(),
-                           accountEntity.getCurrency(),
-                           accountEntity.getBalance(),
-                           balance,
-                           accountEntity.getActive(),
-                           accountEntity.getCreatedAt(),
-                           accountEntity.getUpdatedAt());
-               }).toList();
+                .stream().map(accountEntity -> {
+                    var balance = getBalanceInPesos(accountEntity.getCurrency(), accountEntity.getBalance());
+                    return new AccountResponse(accountEntity.getAccountId(),
+                            accountEntity.getClient().getId(),
+                            accountEntity.getClient().getFirstName(),
+                            accountEntity.getAccountNumber(),
+                            accountEntity.getCurrency(),
+                            accountEntity.getBalance(),
+                            balance,
+                            accountEntity.getActive(),
+                            accountEntity.getCreatedAt(),
+                            accountEntity.getUpdatedAt());
+                }).toList();
 
-    }
+     }
 
     public AccountResponse addAccount(AccountRequest accountRequest) {
         var clientEntity = clientRepository.findById(accountRequest.clientId())
@@ -102,7 +107,7 @@ public class AccountService {
 
     public AccountResponse updateAccount(Long id, AccountRequest accountRequest) {
         var clientEntity = clientRepository.findById(accountRequest.clientId())
-                .orElseThrow(() -> new RuntimeException("Client not found with id: " + accountRequest.clientId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + accountRequest.clientId()));
 
         var accountEntity = accountRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
@@ -115,11 +120,7 @@ public class AccountService {
 
         var updatedAccount = accountRepository.save(accountEntity);
 
-        var balanceInPesos = BigDecimal.ZERO;
-        if (updatedAccount.getCurrency().equals(Currency.USD)) {
-            var dollarModel = dollarApiClient.getCotizacion();
-            balanceInPesos = updatedAccount.getBalance().multiply(dollarModel.compra());
-        }
+        var balanceInPesos = getBalanceInPesos(updatedAccount.getCurrency(), updatedAccount.getBalance());
 
         return new AccountResponse(updatedAccount.getAccountId(),
                 updatedAccount.getClient().getId(),

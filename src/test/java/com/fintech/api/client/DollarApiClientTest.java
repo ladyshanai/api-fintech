@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DolarApiClient Unit Tests")
@@ -21,16 +20,9 @@ class DollarApiClientTest {
     @Test
     @DisplayName("getCotizacion: Debe retornar DolarModel válido")
     void testGetCotizacion_Success() {
-        // Este test requeriría mockear RestClient, que es más complejo
-        // Por lo que se recomienda un test de integración real con WireMock o similar
-        // Este es un test básico de estructura
-
         DollarApiClient client = new DollarApiClient();
-        // Establecer URL vía reflection
         ReflectionTestUtils.setField(client, "url", "https://dolarapi.com/v1/dolares/oficial");
 
-        // El cliente real haría la llamada HTTP
-        // assertNotNull(model);
     }
 
     @Test
@@ -69,7 +61,6 @@ class DollarApiClientTest {
     @Test
     @DisplayName("DolarModel debe ser serializable/deserializable")
     void testDolarModelSerialization() {
-        // Crear modelo
         DollarModel original = new DollarModel(
                 "Oficial",
                 "ABC",
@@ -79,7 +70,6 @@ class DollarApiClientTest {
                 LocalDateTime.now()
         );
 
-        // Verificar que se puede acceder a todos los campos
         assertNotNull(original.moneda());
         assertNotNull(original.casa());
         assertNotNull(original.nombre());
@@ -100,11 +90,9 @@ class DollarApiClientTest {
                 LocalDateTime.now()
         );
 
-        // Pruebas de precisión con BigDecimal
         assertEquals(0, model.compra().compareTo(new BigDecimal("46.00")));
         assertEquals(0, model.venta().compareTo(new BigDecimal("46.50")));
 
-        // La venta debe ser mayor que la compra
         assertTrue(model.venta().compareTo(model.compra()) > 0);
     }
 
@@ -132,7 +120,6 @@ class DollarApiClientTest {
         assertEquals("Oficial", oficial.moneda());
         assertEquals("Blue", blue.moneda());
 
-        // El Dólar Blue tiene mayor cotización
         assertTrue(blue.compra().compareTo(oficial.compra()) > 0);
     }
 
@@ -164,7 +151,6 @@ class DollarApiClientTest {
                 LocalDateTime.now()
         );
 
-        // BigDecimal preserva la precisión
         assertEquals(new BigDecimal("46.50123456789"), model.venta());
         assertEquals(new BigDecimal("46.00123456789"), model.compra());
     }
@@ -190,7 +176,6 @@ class DollarApiClientTest {
                 LocalDateTime.now()
         );
 
-        // Ambos deben tener los mismos valores
         assertEquals(model1.venta(), model2.venta());
         assertEquals(model1.compra(), model2.compra());
     }
