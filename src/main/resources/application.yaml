@@ -1,6 +1,6 @@
 spring:
   application:
-    name: api-fintech
+    name: account-service
   datasource:
     url: jdbc:mysql://localhost:3306/api_fintech?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: api_user
@@ -26,4 +26,9 @@ springdoc:
     enabled: true
   api-docs:
     path: /v3/api-docs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
