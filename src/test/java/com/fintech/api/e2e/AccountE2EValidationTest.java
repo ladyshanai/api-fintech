@@ -1,5 +1,7 @@
 package com.fintech.api.e2e;
 
+import com.fintech.api.client.DollarApiClient;
+import com.fintech.api.client.DollarModel;
 import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.ClientEntity;
@@ -14,12 +16,14 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests E2E adicionales para validar casos edge y errores
@@ -40,6 +44,9 @@ class AccountE2EValidationTest {
 
     private ClientEntity client1;
     private ClientEntity client2;
+
+    @MockitoBean
+    private DollarApiClient dollarApiClient;
 
     @BeforeEach
     void setUp() {
@@ -65,6 +72,17 @@ class AccountE2EValidationTest {
         client2.setRegistrationDate(LocalDateTime.now());
         client2.setModificationDate(LocalDateTime.now());
         client2 = clientRepository.save(client2);
+
+        // Mock del cliente de API Dolar
+        DollarModel mockDollarModel = new DollarModel(
+                "Oficial",
+                "ABC",
+                "Dólar",
+                new BigDecimal("46.50"),
+                new BigDecimal("46.00"),
+                LocalDateTime.now()
+        );
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
     }
 
     @Test

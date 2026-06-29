@@ -1,10 +1,12 @@
 package com.fintech.api.e2e;
 
+import com.fintech.api.client.DollarApiClient;
 import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.ClientEntity;
 import com.fintech.api.repository.AccountRepository;
 import com.fintech.api.repository.ClientRepository;
+import com.fintech.api.client.DollarModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,11 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests E2E para validar flujos completos de la API de Cuentas
@@ -43,6 +47,9 @@ class AccountE2ETest {
     private ClientEntity clientEntity;
     private Long createdAccountId;
 
+    @MockitoBean
+    private DollarApiClient dollarApiClient;
+
     @BeforeEach
     void setUp() {
         accountRepository.deleteAll();
@@ -62,6 +69,17 @@ class AccountE2ETest {
         clientEntity.setModificationDate(LocalDateTime.now());
 
         clientEntity = clientRepository.save(clientEntity);
+
+        // Mock del cliente de API Dolar
+        DollarModel mockDollarModel = new DollarModel(
+                "Oficial",
+                "ABC",
+                "Dólar",
+                new BigDecimal("46.50"),
+                new BigDecimal("46.00"),
+                LocalDateTime.now()
+        );
+        when(dollarApiClient.getCotizacion()).thenReturn(mockDollarModel);
     }
 
     @Test
