@@ -7,6 +7,7 @@ import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.AccountEntity;
 import com.fintech.api.entity.ClientEntity;
 import com.fintech.api.enums.Currency;
+import com.fintech.api.mapper.AccountMapper;
 import com.fintech.api.repository.AccountRepository;
 import com.fintech.api.repository.ClientRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,9 @@ class AccountServiceTest {
 
     @Mock
     private DollarApiClient dollarApiClient;
+
+    @Mock
+    private AccountMapper accountMapper;
 
     @InjectMocks
     private AccountService accountService;
@@ -90,6 +94,35 @@ class AccountServiceTest {
                 new BigDecimal("46.00"),
                 LocalDateTime.now()
         );
+
+        lenient().when(accountMapper.toEntity(any(AccountRequest.class))).thenAnswer(invocation -> {
+            AccountRequest request = invocation.getArgument(0);
+            AccountEntity entity = new AccountEntity();
+            entity.setCurrency("USD".equalsIgnoreCase(request.currency()) ? Currency.USD : Currency.ARS);
+            entity.setAccountNumber(request.accountNumber());
+            entity.setBalance(request.balance());
+            return entity;
+        });
+
+        lenient().when(accountMapper.toResponse(any(AccountEntity.class), any(BigDecimal.class), any(), any()))
+                .thenAnswer(invocation -> {
+                    AccountEntity entity = invocation.getArgument(0);
+                    BigDecimal balanceInPesos = invocation.getArgument(1);
+                    LocalDateTime createdAt = invocation.getArgument(2);
+                    LocalDateTime updatedAt = invocation.getArgument(3);
+                    return new AccountResponse(
+                            entity.getAccountId(),
+                            entity.getClient().getId(),
+                            entity.getClient().getFirstName(),
+                            entity.getAccountNumber(),
+                            entity.getCurrency(),
+                            entity.getBalance(),
+                            balanceInPesos,
+                            entity.getActive(),
+                            createdAt,
+                            updatedAt
+                    );
+                });
     }
 
     // ============================================
@@ -465,4 +498,3 @@ class AccountServiceTest {
         assertFalse(response.active());
     }
 }
-

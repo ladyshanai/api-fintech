@@ -6,6 +6,7 @@ import com.fintech.api.dto.AccountRequest;
 import com.fintech.api.dto.AccountResponse;
 import com.fintech.api.entity.AccountEntity;
 import com.fintech.api.enums.Currency;
+import com.fintech.api.mapper.AccountMapper;
 import com.fintech.api.repository.AccountRepository;
 import com.fintech.api.repository.ClientRepository;
 import com.fintech.api.exception.ResourceNotFoundException;
@@ -21,11 +22,16 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final ClientRepository clientRepository;
     private final DollarApiClient dollarApiClient;
+    private final AccountMapper accountMapper;
 
-    public AccountService(AccountRepository accountRepository, ClientRepository clientRepository, DollarApiClient dollarApiClient) {
+    public AccountService(AccountRepository accountRepository,
+                          ClientRepository clientRepository,
+                          DollarApiClient dollarApiClient,
+                          AccountMapper accountMapper) {
         this.accountRepository = accountRepository;
         this.clientRepository = clientRepository;
         this.dollarApiClient = dollarApiClient;
+        this.accountMapper = accountMapper;
     }
 
     private BigDecimal getBalanceInPesos(Currency currency, BigDecimal balance) {
@@ -46,59 +52,32 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found" + id));
         var balance = getBalanceInPesos(accountEntity.getCurrency(), accountEntity.getBalance());
 
-        return (new AccountResponse(accountEntity.getAccountId(),
-                accountEntity.getClient().getId(),
-                accountEntity.getClient().getFirstName(),
-                accountEntity.getAccountNumber(),
-                accountEntity.getCurrency(),
-                accountEntity.getBalance(),
-                balance,
-                accountEntity.getActive(),
-                accountEntity.getCreatedAt(),
-                accountEntity.getUpdatedAt()));
+        return accountMapper.toResponse(accountEntity, balance, accountEntity.getCreatedAt(), accountEntity.getUpdatedAt());
     }
 
 
     public List<AccountResponse> getAllAccounts() {
-       return accountRepository.findAll()
-                .stream().map(accountEntity -> {
+      return accountRepository.findAll()
+               .stream().map(accountEntity -> {
                     var balance = getBalanceInPesos(accountEntity.getCurrency(), accountEntity.getBalance());
-                    return new AccountResponse(accountEntity.getAccountId(),
-                            accountEntity.getClient().getId(),
-                            accountEntity.getClient().getFirstName(),
-                            accountEntity.getAccountNumber(),
-                            accountEntity.getCurrency(),
-                            accountEntity.getBalance(),
-                            balance,
-                            accountEntity.getActive(),
-                            accountEntity.getCreatedAt(),
-                            accountEntity.getUpdatedAt());
+                    return accountMapper.toResponse(accountEntity, balance, accountEntity.getCreatedAt(), accountEntity.getUpdatedAt());
                 }).toList();
 
      }
 
     public AccountResponse addAccount(AccountRequest accountRequest) {
-        var clientEntity = clientRepository.findById(accountRequest.clientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + accountRequest.clientId()));
+       var clientEntity = clientRepository.findById(accountRequest.clientId())
+               .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + accountRequest.clientId()));
 
-        var accountEntity = new AccountEntity();
-        accountEntity.setAccountNumber(accountRequest.accountNumber());
-        accountEntity.setCurrency(accountRequest.currency().equals("USD") ? Currency.USD : Currency.ARS);
-        accountEntity.setBalance(accountRequest.balance());
-        accountEntity.setActive(true);
-        accountEntity.setClient(clientEntity);
+       var accountEntity = accountMapper.toEntity(accountRequest);
+       accountEntity.setAccountNumber(accountRequest.accountNumber());
+       accountEntity.setBalance(accountRequest.balance());
+       accountEntity.setActive(true);
+       accountEntity.setClient(clientEntity);
 
-        var savedAccount = accountRepository.save(accountEntity);
-        return new AccountResponse(savedAccount.getAccountId(),
-                savedAccount.getClient().getId(),
-                savedAccount.getClient().getFirstName(),
-                savedAccount.getAccountNumber(),
-                savedAccount.getCurrency(),
-                savedAccount.getBalance(),
-                BigDecimal.ZERO,
-                savedAccount.getActive(),
-                LocalDateTime.now(),
-                LocalDateTime.now());
+       var savedAccount = accountRepository.save(accountEntity);
+       var now = LocalDateTime.now();
+       return accountMapper.toResponse(savedAccount, BigDecimal.ZERO, now, now);
     }
 
     public void deleteById(Long id) {
@@ -113,7 +92,7 @@ public class AccountService {
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
 
         accountEntity.setAccountNumber(accountRequest.accountNumber());
-        accountEntity.setCurrency(accountRequest.currency().equals("USD") ? Currency.USD : Currency.ARS);
+        accountEntity.setCurrency(accountMapper.toEntity(accountRequest).getCurrency());
         accountEntity.setBalance(accountRequest.balance());
         accountEntity.setClient(clientEntity);
         accountEntity.setUpdatedAt(LocalDateTime.now());
@@ -122,15 +101,6 @@ public class AccountService {
 
         var balanceInPesos = getBalanceInPesos(updatedAccount.getCurrency(), updatedAccount.getBalance());
 
-        return new AccountResponse(updatedAccount.getAccountId(),
-                updatedAccount.getClient().getId(),
-                updatedAccount.getClient().getFirstName(),
-                updatedAccount.getAccountNumber(),
-                updatedAccount.getCurrency(),
-                updatedAccount.getBalance(),
-                balanceInPesos,
-                updatedAccount.getActive(),
-                updatedAccount.getCreatedAt(),
-                updatedAccount.getUpdatedAt());
+        return accountMapper.toResponse(updatedAccount, balanceInPesos, updatedAccount.getCreatedAt(), updatedAccount.getUpdatedAt());
     }
 }
